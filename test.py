@@ -76,7 +76,7 @@ def main():
     preds2 = np.argmax(prob2, axis=1)
     
     # 두 모델의 소프트맥스 확률 분포 차이 계산 (L1 Distance)
-    # 차이가 클수록 두 모델이 해당 이미지를 바라보는 시각이 다르다는 뜻입니다.
+    # 차이가 클수록 두 모델이 해당 이미지를 바라보는 시각이 다름
     diffs = np.sum(np.abs(prob1 - prob2), axis=1)
     
     # 차이가 큰 순서대로 인덱스 정렬
@@ -88,6 +88,33 @@ def main():
         # 실제 예측 클래스가 다르거나, 확률 차이가 상위 5위 안에 드는 경우를 disagreement로 간주
         if preds1[idx] != preds2[idx] or i < 5:
             disagreements.append((noisy_samples[idx], preds1[idx], preds2[idx]))
+
+
+    # 결과 이미지 저장
+    if len(disagreements) > 0:
+        for i, (img, p1, p2) in enumerate(disagreements[:5]): # 상위 5장 저장
+            visualize_and_save(img, p1, p2, i)
+    
+    # 4. 최종 출력
+    print("\n" + "="*40)
+    print("      DeepXplore Final Results")
+    print("="*40)
+    print(f"[1] Test Samples: {max_search} images (with noise)")
+    print(f"[2] Disagreement-inducing inputs found: {len(disagreements)}") 
+    print(f"[3] Visualizations: Top 5 inputs saved in 'results/'")
+
+    # 뉴런 커버리지 계산 (노트북이 잘 작동하지 않아 100장으로 측정)
+    # threshold 기본값 0.5를 0.2정도로 낮춰서 호출
+    cov1 = calc_neuron_coverage(model1, test_samples[:100], threshold=0.2)
+    cov2 = calc_neuron_coverage(model2, test_samples[:100], threshold=0.2)
+
+    print(f"[4] Model 1 Neuron Coverage: {cov1:.2f}%")
+    print(f"[5] Model 2 Neuron Coverage: {cov2:.2f}%")
+    print("="*40)
+    print("Done! Everything is ready for submission.")
+
+if __name__ == "__main__":
+    main()
 
 
 
