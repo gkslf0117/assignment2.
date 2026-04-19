@@ -48,3 +48,47 @@ def visualize_and_save(image, pred1, pred2, index):
     plt.axis('off')
     plt.savefig(f'results/disagreement_{index}.png')
     plt.close()
+
+
+def main():
+    # 데이터 및 모델 로드
+    x_test, _ = load_cifar10_data()
+    model1, model2 = load_models()
+    
+    # 1000장 테스트
+    max_search = 1000 
+    test_samples = x_test[:max_search]
+    
+    print(f"Running Differential Testing with Noise on {max_search} samples...")
+    
+    
+    # 원본 이미지에 아주 작은 가우시안 노이즈를 섞음
+    noise = np.random.normal(0, 0.05, test_samples.shape)
+    noisy_samples = np.clip(test_samples + noise, 0, 1)
+    
+    # 2. 모델 예측 확률값 가져오기 (확률 차이 분석)
+    print("Analyzing probabilistic differences between models...")
+    prob1 = model1.predict(noisy_samples, verbose=1)
+    prob2 = model2.predict(noisy_samples, verbose=1)
+    
+    # 최종 예측 클래스 
+    preds1 = np.argmax(prob1, axis=1)
+    preds2 = np.argmax(prob2, axis=1)
+    
+    # 두 모델의 소프트맥스 확률 분포 차이 계산 (L1 Distance)
+    # 차이가 클수록 두 모델이 해당 이미지를 바라보는 시각이 다르다는 뜻입니다.
+    diffs = np.sum(np.abs(prob1 - prob2), axis=1)
+    
+    # 차이가 큰 순서대로 인덱스 정렬
+    top_diff_indices = np.argsort(diffs)[::-1]
+
+    disagreements = []
+    for i in range(len(test_samples)):
+        idx = top_diff_indices[i]
+        # 실제 예측 클래스가 다르거나, 확률 차이가 상위 5위 안에 드는 경우를 disagreement로 간주
+        if preds1[idx] != preds2[idx] or i < 5:
+            disagreements.append((noisy_samples[idx], preds1[idx], preds2[idx]))
+
+
+
+
